@@ -105,6 +105,16 @@ jobs:
       - name: Get Git Tag
         uses: little-core-labs/get-git-tag@v3.0.1
         id: tagName
+      - name: Strip v prefix from tag
+        shell: pwsh
+        run: |
+          $rawTag = "${{ steps.tagName.outputs.tag }}"
+          $cleanVer = $rawTag.TrimStart('vV')
+          Write-Host "Original tag: $rawTag"
+          Write-Host "Version without v: $cleanVer"
+          "clean_app_version=$cleanVer" | Out-File $env:GITHUB_ENV -Append
+          "raw_tag=$rawTag" | Out-File $env:GITHUB_ENV -Append
+
 
       - name: Build App (Nuke)
         env:
@@ -113,7 +123,7 @@ jobs:
           is_release: ${{ startsWith(github.ref, 'refs/tags/') }}
           arch: ${{ matrix.arch }}
           osName: ${{ matrix.os }}
-          appVersion: ${{ steps.tagName.outputs.tag }}
+          appVersion: ${{ env.clean_app_version }}
           buildName: ${{ matrix.package == 'folder' && 'appBase' || 'app' }}
         run: ${{ (matrix.os == 'windows') && 'pwsh -ep bypass ./build.ps1 PublishApp' || './build.sh PublishApp' }}
 
