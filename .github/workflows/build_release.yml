@@ -37,8 +37,8 @@ env:
   SIGNPATH_POLICY_SLUG: "ciiec-policy"
   GH_PACKAGES_USER: "HuaLaNN-HS"
   IS_TEST_MODE: ${{ github.event.inputs.is_test_mode || 'false' }}
-  RELEASE_TAG: ${{ github.event.inputs.release_tag || github.ref_name }}
-  PRIMARY_VERSION: ${{ github.event.inputs.primary_version || github.ref_name }}
+  # RELEASE_TAG: ${{ github.event.inputs.release_tag || github.ref_name }}
+  # PRIMARY_VERSION: ${{ github.event.inputs.primary_version || github.ref_name }}
 
 jobs:
   build_app:
@@ -102,19 +102,6 @@ jobs:
           dotnet workload install android
           dotnet workload restore
 
-      - name: Get Git Tag
-        uses: little-core-labs/get-git-tag@v3.0.1
-        id: tagName
-      - name: Strip v prefix from tag
-        shell: pwsh
-        run: |
-          $rawTag = "${{ steps.tagName.outputs.tag }}"
-          $cleanVer = $rawTag.TrimStart('vV')
-          Write-Host "Original tag: $rawTag"
-          Write-Host "Version without v: $cleanVer"
-          "clean_app_version=$cleanVer" | Out-File $env:GITHUB_ENV -Append
-          "raw_tag=$rawTag" | Out-File $env:GITHUB_ENV -Append
-
 
       - name: Build App (Nuke)
         env:
@@ -123,7 +110,7 @@ jobs:
           is_release: ${{ startsWith(github.ref, 'refs/tags/') }}
           arch: ${{ matrix.arch }}
           osName: ${{ matrix.os }}
-          appVersion: ${{ env.clean_app_version }}
+          appVersion: ${{ steps.ver_extract.outputs.clean_version }}
           buildName: ${{ matrix.package == 'folder' && 'appBase' || 'app' }}
         run: ${{ (matrix.os == 'windows') && 'pwsh -ep bypass ./build.ps1 PublishApp' || './build.sh PublishApp' }}
 
@@ -258,7 +245,25 @@ jobs:
         with:
           fetch-depth: 0
           submodules: recursive
-          ref: ${{ env.RELEASE_TAG || github.ref }}
+          ref: ${{github.ref}}
+        
+      - name: Extract Version
+        id: ver_extract
+        shell: pwsh
+        run: |
+          $rawTag = "${{ github.ref_name }}"
+          if ([string]::IsNullOrWhiteSpace($rawTag)) {
+            $rawTag = "v0.0.0.0"
+          }
+          $cleanVer = $rawTag.TrimStart('vV')
+          if ([string]::IsNullOrWhiteSpace($cleanVer)){
+              $cleanVer = "0.0.0.0"
+          }
+          Write-Host "RawTag: $rawTag"
+          Write-Host "Clean Version: $cleanVer"
+          "raw_tag=$rawTag" | Out-File $env:GITHUB_OUTPUT -Append
+          "clean_version=$cleanVer" | Out-File $env:GITHUB_OUTPUT -Append
+
 
       - name: Get Commit Hash
         if: ${{ steps.check_token.outputs.skip_sign != 'true' }}
