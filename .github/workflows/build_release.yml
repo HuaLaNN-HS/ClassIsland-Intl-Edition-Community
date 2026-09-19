@@ -306,7 +306,7 @@ jobs:
     env:
       build_id: app_windows_${{ matrix.arch }}_${{ matrix.build_type }}_${{ matrix.package }}
       artifact_name: out_app_windows_${{ matrix.arch }}_${{ matrix.build_type }}_${{ matrix.package }}
-      isTestMode: ${{ env.IS_TEST_MODE }}
+      isTestMode: ${{ inputs.IS_TEST_MODE }}
       arch: ${{ matrix.arch }}
     strategy:
       fail-fast: false
