@@ -37,7 +37,7 @@ env:
   SIGNPATH_POLICY_SLUG: "ciiec-policy"
   GH_PACKAGES_USER: "HuaLaNN-HS"
   IS_TEST_MODE: ${{ github.event.inputs.is_test_mode || 'false' }}
-  # RELEASE_TAG: ${{ github.event.inputs.release_tag || github.ref_name }}
+  RELEASE_TAG: ${{ github.ref_type == 'tag' && github.ref_name || '' }}
   # PRIMARY_VERSION: ${{ github.event.inputs.primary_version || github.ref_name }}
 
 jobs:
@@ -85,7 +85,7 @@ jobs:
         with:
           fetch-depth: 0
           submodules: recursive
-          ref: ${{ env.RELEASE_TAG || github.ref }}
+          ref: ${{ github.ref }}
 
       - name: Install .NET SDK
         uses: actions/setup-dotnet@v4
@@ -145,7 +145,7 @@ jobs:
         with:
           fetch-depth: 0
           submodules: recursive
-          ref: ${{ env.RELEASE_TAG || github.ref }}
+          ref: ${{ github.ref }}
 
       - name: Install .NET SDK
         uses: actions/setup-dotnet@v4
@@ -182,7 +182,7 @@ jobs:
         with:
           fetch-depth: 0
           submodules: recursive
-          ref: ${{ env.RELEASE_TAG || github.ref }}
+          ref: ${{ github.ref }}
 
       - name: Install .NET SDK
         uses: actions/setup-dotnet@v4
@@ -246,23 +246,6 @@ jobs:
           fetch-depth: 0
           submodules: recursive
           ref: ${{github.ref}}
-        
-      - name: Extract Version
-        id: ver_extract
-        shell: pwsh
-        run: |
-          $rawTag = "${{ github.ref_name }}"
-          if ([string]::IsNullOrWhiteSpace($rawTag)) {
-            $rawTag = "v0.0.0.0"
-          }
-          $cleanVer = $rawTag.TrimStart('vV')
-          if ([string]::IsNullOrWhiteSpace($cleanVer)){
-              $cleanVer = "0.0.0.0"
-          }
-          Write-Host "RawTag: $rawTag"
-          Write-Host "Clean Version: $cleanVer"
-          "raw_tag=$rawTag" | Out-File $env:GITHUB_OUTPUT -Append
-          "clean_version=$cleanVer" | Out-File $env:GITHUB_OUTPUT -Append
 
 
       - name: Get Commit Hash
@@ -270,7 +253,7 @@ jobs:
         uses: prompt/actions-commit-hash@v3
         id: commit
         with:
-          prefix: "${{ env.RELEASE_TAG }}+"
+          prefix: ${{ github.ref_type == 'tag' && format('{0}+', env.RELEASE_TAG) || '' }}
 
       - name: Download Windows Artifacts for Signing
         if: ${{ steps.check_token.outputs.skip_sign != 'true' }}
@@ -340,7 +323,24 @@ jobs:
         with:
           fetch-depth: 0
           submodules: recursive
-          ref: ${{ env.RELEASE_TAG || github.ref }}
+          ref: ${{ github.ref }}
+
+      - name: Extract Version
+        id: ver_extract
+        shell: pwsh
+        run: |
+           $rawTag = "${{ github.ref_name }}"
+           if ([string]::IsNullOrWhiteSpace($rawTag)) {
+             $rawTag = "v0.0.0.0"
+           }
+           $cleanVer = $rawTag.TrimStart('vV')
+           if ([string]::IsNullOrWhiteSpace($cleanVer)){
+               $cleanVer = "0.0.0.0"
+           }
+           Write-Host "RawTag: $rawTag"
+           Write-Host "Clean Version: $cleanVer"
+           "raw_tag=$rawTag" >> $env:GITHUB_OUTPUT
+           "clean_version=$cleanVer" >> $env:GITHUB_OUTPUT
 
       - name: Download All Artifacts (Excluding Nupkgs)
         uses: actions/download-artifact@v4
@@ -366,7 +366,7 @@ jobs:
         with:
           path: ./installer/setup.iss
           options: |
-            /DAppVersion=${{ env.RELEASE_TAG || '2.0.0.0' }}
+            /DAppVersion=${{ '2.0.0.0' }}
             /FClassIsland_Windows_${{ matrix.arch }}_${{ matrix.build_type }}_Installer.exe
             /O${{ github.workspace }}\out_pack
             /DSourceDir=${{ github.workspace }}\out_pack\pack
@@ -401,10 +401,10 @@ jobs:
               exit 1
             fi
           fi
-          if [[ -z "${{ env.RELEASE_TAG }}" ]]; then
-            echo "::error::RELEASE_TAG environment variable is empty"
-            exit 1
-          fi
+          # if [[ -z "${{ env.RELEASE_TAG }}" ]]; then
+            # echo "::error::RELEASE_TAG environment variable is empty"
+            # exit 1
+          # fi
           echo "Release tag is valid: ${{ env.RELEASE_TAG }}"
 
       - name: Checkout
@@ -412,7 +412,7 @@ jobs:
         with:
           fetch-depth: 0
           submodules: recursive
-          ref: ${{ env.RELEASE_TAG || github.ref }}
+          ref: ${{ github.ref_type == 'tag' && env.RELEASE_TAG || github.ref }}
 
       - name: Download All Artifacts for Release
         uses: actions/download-artifact@v4
