@@ -6,7 +6,7 @@ using ClassIsland;
 [assembly: AssemblyVersion("0.0.0.0")]
 [assembly: AssemblyInformationalVersion("NIXBUILD+NIXBUILD_LONG_HASH")]
 #else
-[assembly: AssemblyVersion("v0.0.0.0")]
+[assembly: AssemblyVersion("0.0.0.0")]
 [assembly: AssemblyInformationalVersion("0.0.0.0")]
 #endif
 
