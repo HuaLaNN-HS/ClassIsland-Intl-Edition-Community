@@ -37,8 +37,8 @@ env:
   SIGNPATH_POLICY_SLUG: "ciiec-policy"
   GH_PACKAGES_USER: "HuaLaNN-HS"
   IS_TEST_MODE: ${{ github.event.inputs.is_test_mode || 'false' }}
-  RELEASE_TAG: ${{ github.ref_type == 'tag' && github.ref_name || '' }}
-  # PRIMARY_VERSION: ${{ github.event.inputs.primary_version || github.ref_name }}
+  RELEASE_TAG: ${{ github.event.inputs.release_tag || github.ref_name }}
+  PRIMARY_VERSION: ${{ github.event.inputs.primary_version || github.ref_name }}
 
 jobs:
   build_app:
@@ -47,7 +47,7 @@ jobs:
     env:
       build_id: appBase_${{ matrix.os }}_${{ matrix.arch }}_${{ matrix.build_type }}_${{ matrix.package }}
       artifact_name: out_${{ matrix.package == 'folder' && 'appBase' || 'app' }}_${{ matrix.os }}_${{ matrix.arch }}_${{ matrix.build_type }}_${{ matrix.package }}
-      isTestMode: ${{ inputs.IS_TEST_MODE }}
+      isTestMode: ${{ env.IS_TEST_MODE }}
       arch: ${{ matrix.arch }}
     strategy:
       fail-fast: false
@@ -85,7 +85,7 @@ jobs:
         with:
           fetch-depth: 0
           submodules: recursive
-          ref: ${{ github.ref }}
+          ref: ${{ env.RELEASE_TAG || github.ref }}
 
       - name: Install .NET SDK
         uses: actions/setup-dotnet@v4
@@ -102,6 +102,9 @@ jobs:
           dotnet workload install android
           dotnet workload restore
 
+      - name: Get Git Tag
+        uses: little-core-labs/get-git-tag@v3.0.1
+        id: tagName
 
       - name: Build App (Nuke)
         env:
@@ -110,7 +113,7 @@ jobs:
           is_release: ${{ startsWith(github.ref, 'refs/tags/') }}
           arch: ${{ matrix.arch }}
           osName: ${{ matrix.os }}
-          appVersion: ${{ steps.ver_extract.outputs.clean_version }}
+          appVersion: ${{ steps.tagName.outputs.tag }}
           buildName: ${{ matrix.package == 'folder' && 'appBase' || 'app' }}
         run: ${{ (matrix.os == 'windows') && 'pwsh -ep bypass ./build.ps1 PublishApp' || './build.sh PublishApp' }}
 
@@ -129,7 +132,7 @@ jobs:
     env:
       build_id: launcher_${{ matrix.os }}_${{ matrix.arch }}_${{ matrix.build_type }}_${{ matrix.package }}
       artifact_name: out_launcher_${{ matrix.os }}_${{ matrix.arch }}_${{ matrix.build_type }}_${{ matrix.package }}
-      isTestMode: ${{ inputs.IS_TEST_MODE }}
+      isTestMode: ${{ env.IS_TEST_MODE }}
       arch: ${{ matrix.arch }}
     strategy:
       fail-fast: false
@@ -145,7 +148,7 @@ jobs:
         with:
           fetch-depth: 0
           submodules: recursive
-          ref: ${{ github.ref }}
+          ref: ${{ env.RELEASE_TAG || github.ref }}
 
       - name: Install .NET SDK
         uses: actions/setup-dotnet@v4
@@ -182,7 +185,7 @@ jobs:
         with:
           fetch-depth: 0
           submodules: recursive
-          ref: ${{ github.ref }}
+          ref: ${{ env.RELEASE_TAG || github.ref }}
 
       - name: Install .NET SDK
         uses: actions/setup-dotnet@v4
@@ -245,15 +248,14 @@ jobs:
         with:
           fetch-depth: 0
           submodules: recursive
-          ref: ${{github.ref}}
-
+          ref: ${{ env.RELEASE_TAG || github.ref }}
 
       - name: Get Commit Hash
         if: ${{ steps.check_token.outputs.skip_sign != 'true' }}
         uses: prompt/actions-commit-hash@v3
         id: commit
         with:
-          prefix: ${{ github.ref_type == 'tag' && format('{0}+', env.RELEASE_TAG) || '' }}
+          prefix: "${{ env.RELEASE_TAG }}+"
 
       - name: Download Windows Artifacts for Signing
         if: ${{ steps.check_token.outputs.skip_sign != 'true' }}
@@ -304,7 +306,7 @@ jobs:
     env:
       build_id: app_windows_${{ matrix.arch }}_${{ matrix.build_type }}_${{ matrix.package }}
       artifact_name: out_app_windows_${{ matrix.arch }}_${{ matrix.build_type }}_${{ matrix.package }}
-      isTestMode: ${{ inputs.IS_TEST_MODE }}
+      isTestMode: ${{ env.IS_TEST_MODE }}
       arch: ${{ matrix.arch }}
     strategy:
       fail-fast: false
@@ -323,24 +325,7 @@ jobs:
         with:
           fetch-depth: 0
           submodules: recursive
-          ref: ${{ github.ref }}
-
-      - name: Extract Version
-        id: ver_extract
-        shell: pwsh
-        run: |
-           $rawTag = "${{ github.ref_name }}"
-           if ([string]::IsNullOrWhiteSpace($rawTag)) {
-             $rawTag = "v0.0.0.0"
-           }
-           $cleanVer = $rawTag.TrimStart('vV')
-           if ([string]::IsNullOrWhiteSpace($cleanVer)){
-               $cleanVer = "0.0.0.0"
-           }
-           Write-Host "RawTag: $rawTag"
-           Write-Host "Clean Version: $cleanVer"
-           "raw_tag=$rawTag" >> $env:GITHUB_OUTPUT
-           "clean_version=$cleanVer" >> $env:GITHUB_OUTPUT
+          ref: ${{ env.RELEASE_TAG || github.ref }}
 
       - name: Download All Artifacts (Excluding Nupkgs)
         uses: actions/download-artifact@v4
@@ -366,7 +351,7 @@ jobs:
         with:
           path: ./installer/setup.iss
           options: |
-            /DAppVersion=${{ '2.0.0.0' }}
+            /DAppVersion=${{ env.RELEASE_TAG || '2.0.0.0' }}
             /FClassIsland_Windows_${{ matrix.arch }}_${{ matrix.build_type }}_Installer.exe
             /O${{ github.workspace }}\out_pack
             /DSourceDir=${{ github.workspace }}\out_pack\pack
@@ -401,10 +386,10 @@ jobs:
               exit 1
             fi
           fi
-          # if [[ -z "${{ env.RELEASE_TAG }}" ]]; then
-            # echo "::error::RELEASE_TAG environment variable is empty"
-            # exit 1
-          # fi
+          if [[ -z "${{ env.RELEASE_TAG }}" ]]; then
+            echo "::error::RELEASE_TAG environment variable is empty"
+            exit 1
+          fi
           echo "Release tag is valid: ${{ env.RELEASE_TAG }}"
 
       - name: Checkout
@@ -412,7 +397,7 @@ jobs:
         with:
           fetch-depth: 0
           submodules: recursive
-          ref: ${{ github.ref_type == 'tag' && env.RELEASE_TAG || github.ref }}
+          ref: ${{ env.RELEASE_TAG || github.ref }}
 
       - name: Download All Artifacts for Release
         uses: actions/download-artifact@v4
