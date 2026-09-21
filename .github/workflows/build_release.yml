@@ -100,7 +100,7 @@ jobs:
         if: ${{ matrix.os == 'android' }}
         run: |
           dotnet workload install android
-          dotnet workload restore
+        # dotnet workload restore
 
       - name: Get Git Tag
         uses: little-core-labs/get-git-tag@v3.0.1
