@@ -35,6 +35,7 @@ env:
   SIGNPATH_ORG_ID: "a9190fa7-b054-4dd5-991c-7669d4a91f0c"
   SIGNPATH_PROJECT_SLUG: "ciiec-alpha"
   SIGNPATH_POLICY_SLUG: "ciiec-policy"
+  SIGNPATH_ARTIFACT_SLUG: "initial"
   GH_PACKAGES_USER: "HuaLaNN-HS"
   IS_TEST_MODE: ${{ github.event.inputs.is_test_mode || 'false' }}
   RELEASE_TAG: ${{ github.event.inputs.release_tag || github.ref_name }}
@@ -284,6 +285,7 @@ jobs:
           api-token: '${{ secrets.SIGNPATH_TOKEN }}'
           organization-id: '${{ env.SIGNPATH_ORG_ID }}'
           project-slug: '${{ env.SIGNPATH_PROJECT_SLUG }}'
+          artifact-configuration-slug: '${{ env.SIGNPATH_ARTIFACT_SLUG }}'
           signing-policy-slug: '${{ env.SIGNPATH_POLICY_SLUG }}'
           github-artifact-id: '${{ steps.upload-sign-bundle.outputs.artifact-id }}'
           wait-for-completion: true
