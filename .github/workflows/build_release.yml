@@ -291,7 +291,9 @@ jobs:
           wait-for-completion: true
           output-artifact-directory: './out_signed'
           parameters: |
-            version: ${{ steps.commit.outputs.long }}
+            {
+              "version" : "${{ steps.commit.outputs.long }}"
+            }
 
       - name: Upload Signed Files
         if: ${{ steps.check_token.outputs.skip_sign != 'true' }}
