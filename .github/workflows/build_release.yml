@@ -275,7 +275,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: sign-bundle
-          path: ./ci_tmp/sign_bundle.zip
+          path: ./ci_tmp/sign_bundle/*
           retention-days: 1
 
       - name: Sign Application (SignPath)
@@ -287,11 +287,12 @@ jobs:
           project-slug: '${{ env.SIGNPATH_PROJECT_SLUG }}'
           artifact-configuration-slug: '${{ env.SIGNPATH_ARTIFACT_CONFIGURATION_SLUG }}'
           signing-policy-slug: '${{ env.SIGNPATH_POLICY_SLUG }}'
-          github-artifact-id: "${{ steps.upload-sign-bundle.outputs['artifact-id'] }}"
+          github-artifact-id: '${{ steps.upload-sign-bundle.outputs.artifact-id }}'
           wait-for-completion: true
           output-artifact-directory: './out_signed'
           parameters: |
             version: ${{ toJSON(steps.commit.outputs.long) }}
+            buildId: ${{ toJSON(github.run_id) }}
 
       - name: Upload Signed Files
         if: ${{ steps.check_token.outputs.skip_sign != 'true' }}
