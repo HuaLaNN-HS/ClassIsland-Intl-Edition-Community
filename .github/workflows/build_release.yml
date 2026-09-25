@@ -292,7 +292,6 @@ jobs:
           output-artifact-directory: './out_signed'
           parameters: |
             version: ${{ toJSON(steps.commit.outputs.long) }}
-            buildId: ${{ toJSON(github.run_id) }}
 
       - name: Upload Signed Files
         if: ${{ steps.check_token.outputs.skip_sign != 'true' }}
