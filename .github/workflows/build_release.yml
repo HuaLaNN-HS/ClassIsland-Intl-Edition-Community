@@ -269,18 +269,6 @@ jobs:
         if: ${{ steps.check_token.outputs.skip_sign != 'true' }}
         run: pwsh -ep Bypass -c ./tools/release-gen/create-sign-bundle.ps1
 
-      - name: Upload Sign Bundle
-        id: upload-sign-bundle
-        if: ${{ steps.check_token.outputs.skip_sign != 'true' }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: sign-bundle
-          path: ./ci_tmp/sign_bundle/*
-          retention-days: 1
-
-      - name: Debug artifact‑id
-        run: echo "artifact-id = >${{ steps.upload-sign-bundle.outputs['artifact-id'] }}<"
-
       - name: Sign Application (SignPath)
         if: ${{ steps.check_token.outputs.skip_sign != 'true' }}
         uses: signpath/github-action-submit-signing-request@v1
@@ -290,7 +278,7 @@ jobs:
           project-slug: '${{ env.SIGNPATH_PROJECT_SLUG }}'
           artifact-configuration-slug: '${{ env.SIGNPATH_ARTIFACT_CONFIGURATION_SLUG }}'
           signing-policy-slug: '${{ env.SIGNPATH_POLICY_SLUG }}'
-          github-artifact-id: "${{ steps.upload-sign-bundle.outputs['artifact-id'] }}"
+          input-artifact-path: ./ci_tmp/sign_bundle.zip
           wait-for-completion: true
           output-artifact-directory: './out_signed'
           parameters: |
