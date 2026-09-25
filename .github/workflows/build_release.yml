@@ -278,6 +278,9 @@ jobs:
           path: ./ci_tmp/sign_bundle/*
           retention-days: 1
 
+      - name: Debug artifact‑id
+        run: echo "artifact-id = >${{ steps.upload-sign-bundle.outputs['artifact-id'] }}<"
+
       - name: Sign Application (SignPath)
         if: ${{ steps.check_token.outputs.skip_sign != 'true' }}
         uses: signpath/github-action-submit-signing-request@v1
@@ -287,7 +290,7 @@ jobs:
           project-slug: '${{ env.SIGNPATH_PROJECT_SLUG }}'
           artifact-configuration-slug: '${{ env.SIGNPATH_ARTIFACT_CONFIGURATION_SLUG }}'
           signing-policy-slug: '${{ env.SIGNPATH_POLICY_SLUG }}'
-          github-artifact-id: '${{ steps.upload-sign-bundle.outputs.artifact-id }}'
+          github-artifact-id: "${{ steps.upload-sign-bundle.outputs['artifact-id'] }}"
           wait-for-completion: true
           output-artifact-directory: './out_signed'
           parameters: |
