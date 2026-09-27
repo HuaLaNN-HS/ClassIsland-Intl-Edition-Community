@@ -291,7 +291,7 @@ jobs:
           wait-for-completion: true
           output-artifact-directory: './out_signed'
           parameters: |
-            version: {{ 0.0.0.1 }}
+            version: ${{ toJSON('0.0.0.1') }}
 
       - name: Upload Signed Files
         if: ${{ steps.check_token.outputs.skip_sign != 'true' }}
