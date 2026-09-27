@@ -231,6 +231,9 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ github.event_name != 'pull_request' && github.event.inputs.is_test_mode != 'true' }}
     needs: [ build_app, build_launcher, build_nupkg ]
+    permissions:
+      actions: read
+      contents: read
     steps:
       - name: Check SignPath Token
         id: check_token
@@ -269,6 +272,15 @@ jobs:
         if: ${{ steps.check_token.outputs.skip_sign != 'true' }}
         run: pwsh -ep Bypass -c ./tools/release-gen/create-sign-bundle.ps1
 
+      - name: Inspect Sign Bundle
+        if: ${{ steps.check_token.outputs.skip_sign != 'true' }}
+        shell: bash
+        run: |
+          echo "Files prepared for signing:"
+          find ./ci_tmp/sign_bundle -maxdepth 2 -type f -printf '%p  %s bytes\n' || true
+          echo
+          du -sh ./ci_tmp/sign_bundle || true
+
       - name: Upload Sign Bundle
         id: upload-sign-bundle
         if: ${{ steps.check_token.outputs.skip_sign != 'true' }}
@@ -276,11 +288,30 @@ jobs:
         with:
           name: sign-bundle
           path: ./ci_tmp/sign_bundle/*
+          if-no-files-found: error
           retention-days: 1
 
-      - name: Sign Application (SignPath)
+      - name: SignPath Connection Diagnostics
         if: ${{ steps.check_token.outputs.skip_sign != 'true' }}
-        uses: signpath/github-action-submit-signing-request@v1
+        shell: bash
+        run: |
+          echo "Repository: $GITHUB_REPOSITORY"
+          echo "Run ID: $GITHUB_RUN_ID"
+          echo "Run attempt: $GITHUB_RUN_ATTEMPT"
+          echo "Commit: $GITHUB_SHA"
+          echo "Sign bundle GitHub artifact ID: ${{ steps.upload-sign-bundle.outputs.artifact-id }}"
+          echo "SignPath project: ${{ env.SIGNPATH_PROJECT_SLUG }}"
+          echo "SignPath policy: ${{ env.SIGNPATH_POLICY_SLUG }}"
+          echo "SignPath artifact configuration: ${{ env.SIGNPATH_ARTIFACT_CONFIGURATION_SLUG }}"
+          echo
+          echo "Checking basic HTTPS reachability to SignPath (no secret is sent)..."
+          curl --location --silent --show-error             --connect-timeout 15             --max-time 30             --retry 3             --retry-all-errors             --output /dev/null             --write-out 'SignPath web endpoint HTTP status: %{http_code}\n'             https://app.signpath.io/
+
+      - name: Sign Application (SignPath)
+        id: signpath
+        if: ${{ steps.check_token.outputs.skip_sign != 'true' }}
+        continue-on-error: true
+        uses: signpath/github-action-submit-signing-request@v3
         with:
           api-token: '${{ secrets.SIGNPATH_TOKEN }}'
           organization-id: '${{ env.SIGNPATH_ORG_ID }}'
@@ -288,17 +319,38 @@ jobs:
           artifact-configuration-slug: '${{ env.SIGNPATH_ARTIFACT_CONFIGURATION_SLUG }}'
           signing-policy-slug: '${{ env.SIGNPATH_POLICY_SLUG }}'
           github-artifact-id: '${{ steps.upload-sign-bundle.outputs.artifact-id }}'
+          github-token: '${{ secrets.GITHUB_TOKEN }}'
           wait-for-completion: true
+          wait-for-completion-timeout-in-seconds: 1200
+          service-unavailable-timeout-in-seconds: 600
+          download-signed-artifact-timeout-in-seconds: 300
           output-artifact-directory: './out_signed'
           parameters: |
-          # version: "0.0.0.1"
+            version: ${{ toJSON(steps.commit.outputs.long) }}
+
+      - name: Report SignPath Result
+        if: ${{ always() && steps.check_token.outputs.skip_sign != 'true' }}
+        shell: bash
+        run: |
+          echo "SignPath step outcome: ${{ steps.signpath.outcome }}"
+          echo "Signing request ID: ${{ steps.signpath.outputs.signing-request-id }}"
+          echo "Signing request URL: ${{ steps.signpath.outputs.signing-request-web-url }}"
+          echo "Signed artifact URL present: ${{ steps.signpath.outputs.signed-artifact-download-url != '' }}"
+
+      - name: Fail if SignPath Failed
+        if: ${{ steps.check_token.outputs.skip_sign != 'true' && steps.signpath.outcome == 'failure' }}
+        shell: bash
+        run: |
+          echo "::error::SignPath signing failed. Review the Sign Application and diagnostics steps above."
+          exit 1
 
       - name: Upload Signed Files
-        if: ${{ steps.check_token.outputs.skip_sign != 'true' }}
+        if: ${{ steps.check_token.outputs.skip_sign != 'true' && steps.signpath.outcome == 'success' }}
         uses: actions/upload-artifact@v4
         with:
           name: signed_artifacts
           path: ./out_signed/*
+          if-no-files-found: error
           retention-days: 5
 
   pack_app:
