@@ -78,6 +78,8 @@ partial class Build
         {
             var createDeb = Package == "deb";
             var isSelfContained = BuildType == "selfContained";
+            var rawAppVersion = AppVersion;
+            var cleanAppVersion = rawAppVersion.TrimStart('v');
             DotNetPublish(s => s
                 .SetProject(DesktopAppEntryProject)
                 .SetConfiguration(Configuration)
@@ -89,9 +91,9 @@ partial class Build
                 .SetProperty("ClassIsland_SelfContained", isSelfContained)
                 .SetProperty("PublishDir", Package == "pkg" ? AppOutputPath : AppPublishPath)
                 .SetProperty("DebUOSOutputFilePath", AppOutputPath / PublishArtifactName + ".deb")
-                .SetProperty("UOSDebVersion", AppVersion)
-                .SetProperty("ApplicationVersion", AppVersion)
-                .SetProperty("ApplicationDisplayVersion", AppVersion)
+                .SetProperty("UOSDebVersion", cleanAppVersion)
+                .SetProperty("ApplicationVersion", cleanAppVersion)
+                .SetProperty("ApplicationDisplayVersion", rawAppVersion)
                 .SetProperty("AutoCreateDebUOSAfterPublish", createDeb));
             if (Package == "pkg")
             {
