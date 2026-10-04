@@ -44,7 +44,7 @@ env:
 jobs:
   build_app:
     continue-on-error: ${{ matrix.experimental }}
-    runs-on: ${{ matrix.os == 'macos' && 'macos-15' || ((matrix.os == 'android' || matrix.os == 'linux') && 'ubuntu-24.04' || 'windows-2022') }}
+    runs-on: ${{ matrix.os == 'macos' && 'macos-15' || ( matrix.os == 'android' && 'ubuntu-24.04' || 'windows-2022' ) }}
     env:
       build_id: appBase_${{ matrix.os }}_${{ matrix.arch }}_${{ matrix.build_type }}_${{ matrix.package }}
       artifact_name: out_${{ matrix.package == 'folder' && 'appBase' || 'app' }}_${{ matrix.os }}_${{ matrix.arch }}_${{ matrix.build_type }}_${{ matrix.package }}
@@ -69,28 +69,6 @@ jobs:
             build_type: selfContained
             arch: x64
             experimental: true
-          # Linux support: keep enabled for release artifacts.
-          - os: linux
-            package: folder
-            build_type: selfContained
-            arch: x64
-            experimental: true
-          - os: linux
-            package: deb
-            build_type: selfContained
-            arch: x64
-            experimental: true
-          - os: linux
-            package: folder
-            build_type: selfContained
-            arch: arm64
-            experimental: true
-          - os: linux
-            package: deb
-            build_type: selfContained
-            arch: arm64
-            experimental: true
-          # Android is kept experimental until upstream release support is ready.
           - os: android
             package: apk
             build_type: monoaot
@@ -364,7 +342,7 @@ jobs:
           pattern: "out_launcher_*"
 
       - name: Download Signed Artifacts
-        if: ${{ needs.sign_1.result == 'success' }}
+        if: ${{ env.IS_TEST_MODE != 'true' }}
         uses: actions/download-artifact@v4
         with:
           path: ./out_artifacts
@@ -450,8 +428,6 @@ jobs:
             ./out_artifacts/out_app_windows_*/**/*.exe
             ./out_artifacts/out_launcher_windows_*/**/*.zip
             ./out_artifacts/out_app_macos_*/**/*.pkg
-            ./out_artifacts/out_app_linux_*/**/*.zip
-            ./out_artifacts/out_app_linux_*/**/*.deb
             ./out_artifacts/out_app_android_*/**/*.apk
             ./out_artifacts/out_nupkgs/**/*.nupkg
           draft: true
