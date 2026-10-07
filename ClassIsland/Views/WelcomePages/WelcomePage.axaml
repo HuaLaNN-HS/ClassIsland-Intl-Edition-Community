@@ -1,4 +1,4 @@
-<UserControl xmlns="https://github.com/avaloniaui"
+A<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -81,13 +81,13 @@
                         </Style>
                     </StackPanel.Styles>
                     <HyperlinkButton Click="ButtonDataMigration_OnClick">
-                        <TextBlock>数据迁移</TextBlock>
+                        <TextBlock>Data Transfer</TextBlock>
                     </HyperlinkButton>
                     <HyperlinkButton Click="ButtonEnterRecovery_OnClick">
-                        <TextBlock>故障排除/恢复备份</TextBlock>
+                        <TextBlock>Resolve Bugs/Restore a Backup</TextBlock>
                     </HyperlinkButton>
                     <HyperlinkButton Click="ButtonJoinManagement_OnClick">
-                        <TextBlock>加入管理</TextBlock>
+                        <TextBlock>Join a Management Group</TextBlock>
                     </HyperlinkButton> 
                 </StackPanel>
             </StackPanel>

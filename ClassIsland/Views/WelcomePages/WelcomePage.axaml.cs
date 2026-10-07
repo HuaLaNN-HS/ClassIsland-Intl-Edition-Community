@@ -31,8 +31,8 @@ public partial class WelcomePage : UserControl, IWelcomePage
     {
         this.ShowToast(new ToastMessage()
         {
-            Title = "欢迎使用 ClassIsland",
-            Message = "ClassIsland 是开源免费的软件，官方没有提供任何形式的付费支持服务，源代码仓库地址在 https://github.com/ClassIsland/ClassIsland/。如果您通过有偿协助等付费方式取得本应用，在遇到问题时请在与卖家约定的服务框架下，优先向卖家求助。如果卖家没有提供您预期的服务，请退款或通过其它形式积极维护您的合法权益。",
+            Title = "Welcome to CIIEC",
+            Message = "CIIEC is a free open-source software, offically, there are absolutely no payment-required services provided, the source URL is https://github.com/HuaLaNN-HS/ClassIsland-Intl-Edition-Community, and the original repository's source code is at https://github.com/ClassIsland/ClassIsland. If you've aquired this software through paid assistance, it's recommended to seek help under the architecture of your provider when you encounter problems. If the provider didn't provide estimated service, please seek for a refund or actively protect your legal rights through other ways.",
             AutoClose = false,
             Severity = FAInfoBarSeverity.Warning
         });

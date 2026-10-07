@@ -3,11 +3,11 @@ using System.Runtime.Versioning;
 using ClassIsland;
 
 #if NIX
-[assembly: AssemblyVersion("0.0.0.0")]
+[assembly: AssemblyVersion("0.0.0.1")]
 [assembly: AssemblyInformationalVersion("NIXBUILD+NIXBUILD_LONG_HASH")]
 #else
-[assembly: AssemblyVersion(GitInfo.Tag)]
-[assembly: AssemblyInformationalVersion($"{GitInfo.Tag}+{GitInfo.CommitHash}")]
+[assembly: AssemblyVersion("0.0.0.1")]
+[assembly: AssemblyInformationalVersion("0.0.0.1")]
 #endif
 
 [assembly: AssemblyTitle("ClassIsland")]
