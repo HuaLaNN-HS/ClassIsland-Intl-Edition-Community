@@ -4,7 +4,7 @@
 
 Under Construction<br/>
 正在施工<br/>
-v0.0.0.2-Aevum-年华 will likely be released in December 2026
+v0.0.0.3-Aevum-年华 will likely be released in December 2026
 
 # <image src="ClassIsland/Assets/AppLogo_AppLogo.svg" height="28" width="28"/> ClassIsland
 
