@@ -14,11 +14,6 @@ on:
         description: '主发布版本 (例如 1.0.0)'
         required: true
         type: string
-      source_ref:
-        description: '手动运行时用于构建的源码 ref（分支/标签）；留空则使用 Run workflow 当前选择的分支'
-        required: false
-        type: string
-        default: ''
       is_test_mode:
         description: '是否处于测试发布模式 (跳过 SignPath 签名)'
         required: false
@@ -53,7 +48,6 @@ env:
 
   GH_PACKAGES_USER: "HuaLaNN-HS"
   IS_TEST_MODE: ${{ github.event.inputs.is_test_mode || 'false' }}
-  SOURCE_REF: ${{ github.event_name == 'workflow_dispatch' && (github.event.inputs.source_ref || github.ref_name) || github.ref_name }}
   RELEASE_TAG: ${{ github.event.inputs.release_tag || github.ref_name }}
   PRIMARY_VERSION: ${{ github.event.inputs.primary_version || github.ref_name }}
 
@@ -64,9 +58,6 @@ jobs:
   # Linux:   x64/arm64, selfContained, folder + deb
   # macOS:   x64/arm64, selfContained, pkg
   build_app:
-    # macOS is not an input to pack_app. Let Windows/Linux packaging continue even
-    # if a macOS matrix leg fails; publish will still require the macOS artifacts.
-    continue-on-error: ${{ matrix.os == 'macos' }}
     runs-on: ${{ matrix.os == 'linux' && 'ubuntu-24.04' || (matrix.os == 'macos' && 'macos-26' || 'windows-2022') }}
     env:
       build_id: appBase_${{ matrix.os }}_${{ matrix.arch }}_${{ matrix.build_type }}_${{ matrix.package }}
@@ -103,7 +94,7 @@ jobs:
         with:
           fetch-depth: 0
           submodules: recursive
-          ref: ${{ env.SOURCE_REF }}
+          ref: ${{ env.RELEASE_TAG || github.ref }}
 
       - name: List files
         run: ls
@@ -129,20 +120,6 @@ jobs:
           xcodebuild -showsdks
           dotnet workload install macos --version "$DOTNET_SDK_VERSION"
           test "$(dotnet workload --version)" = "$DOTNET_SDK_VERSION"
-
-      - name: Apply legacy macOS target-platform compatibility
-        if: ${{ matrix.os == 'macos' }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          # The legacy CIIEC source uses net8.0-macos15.0. With the .NET 10 SDK,
-          # MSBuild can otherwise resolve TargetPlatformVersion as 1.0 and fail
-          # with NETSDK1135 before compilation. Only apply the override when the
-          # checked-out source actually contains that legacy TFM.
-          if grep -Rqs --include='*.props' --include='*.csproj' 'net8\.0-macos15\.0' .; then
-            echo "TargetPlatformVersion=15.0" >> "$GITHUB_ENV"
-            echo "::notice::Detected legacy net8.0-macos15.0 source; TargetPlatformVersion=15.0 applied."
-          fi
 
       - name: Add upstream GitHub Package Registry
         run: dotnet nuget add source --username ClassIsland --password ${{ secrets.GITHUB_TOKEN }} --store-password-in-clear-text --name github "https://nuget.pkg.github.com/ClassIsland/index.json"
@@ -197,19 +174,7 @@ jobs:
         with:
           fetch-depth: 0
           submodules: recursive
-          ref: ${{ env.SOURCE_REF }}
-
-      - name: Verify Android build support in checked-out source
-        shell: bash
-        run: |
-          set -euo pipefail
-          if ! grep -Rqs --include='*.cs' 'PublishAndroidApp' ./build; then
-            echo "::error::The checked-out source ref '${SOURCE_REF}' does not contain the NUKE target PublishAndroidApp."
-            echo "::error::This workflow is the Misha/Android packaging workflow, but the source is an older desktop-only revision."
-            echo "::error::For a manual run, set source_ref to the CIIEC branch synchronized with the upstream Misha preview (normally dev/misha-preview), or disable Android packaging."
-            exit 1
-          fi
-          echo "Android build target found in ${SOURCE_REF}."
+          ref: ${{ env.RELEASE_TAG || github.ref }}
 
       - name: Install .NET SDK
         uses: actions/setup-dotnet@v4
@@ -327,7 +292,7 @@ jobs:
         with:
           fetch-depth: 0
           submodules: recursive
-          ref: ${{ env.SOURCE_REF }}
+          ref: ${{ env.RELEASE_TAG || github.ref }}
 
       - name: List files
         run: ls
@@ -398,7 +363,7 @@ jobs:
         with:
           fetch-depth: 0
           submodules: recursive
-          ref: ${{ env.SOURCE_REF }}
+          ref: ${{ env.RELEASE_TAG || github.ref }}
 
       - name: Get Commit Hash
         if: ${{ steps.check_token.outputs.skip_sign != 'true' }}
@@ -486,7 +451,7 @@ jobs:
         with:
           fetch-depth: 0
           submodules: recursive
-          ref: ${{ env.SOURCE_REF }}
+          ref: ${{ env.RELEASE_TAG || github.ref }}
 
       - name: Download Artifacts
         uses: actions/download-artifact@v4
@@ -540,7 +505,7 @@ jobs:
         with:
           fetch-depth: 0
           submodules: recursive
-          ref: ${{ env.SOURCE_REF }}
+          ref: ${{ env.RELEASE_TAG || github.ref }}
 
       - name: Install .NET SDK
         uses: actions/setup-dotnet@v4
@@ -617,14 +582,13 @@ jobs:
           fi
 
           echo "Release tag: ${{ env.RELEASE_TAG }}"
-          echo "Source ref: ${{ env.SOURCE_REF }}"
 
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
           submodules: recursive
-          ref: ${{ env.SOURCE_REF }}
+          ref: ${{ env.RELEASE_TAG || github.ref }}
 
       - name: Download All Artifacts
         uses: actions/download-artifact@v4
@@ -707,9 +671,6 @@ jobs:
           draft: true
           token: ${{ secrets.GITHUB_TOKEN }}
           tag: ${{ env.RELEASE_TAG }}
-          # If RELEASE_TAG does not exist yet, create it at the exact source ref
-          # used for this build. Existing tags are never moved by this action.
-          commit: ${{ env.SOURCE_REF }}
           name: "CIIEC ${{ env.RELEASE_TAG }}"
           body: "Auto-generated release for ${{ env.RELEASE_TAG }}"
           allowUpdates: true
